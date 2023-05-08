@@ -64,7 +64,6 @@ class PolicyActionData:
         current policy.
     """
 
-    rnn_hidden_states: torch.Tensor
     actions: Optional[torch.Tensor] = None
     values: Optional[torch.Tensor] = None
     action_log_probs: Optional[torch.Tensor] = None
@@ -127,9 +126,7 @@ class Policy(abc.ABC):
         for c in self._get_policy_components():
             yield from c.buffers()
 
-    def get_value(
-        self, observations, rnn_hidden_states, prev_actions, masks
-    ) -> torch.Tensor:
+    def get_value(self, observations) -> torch.Tensor:
         raise NotImplementedError(
             "Get value is supported in non-neural network policies."
         )
@@ -151,9 +148,6 @@ class Policy(abc.ABC):
     def act(
         self,
         observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
         deterministic=False,
     ) -> PolicyActionData:
         raise NotImplementedError
@@ -222,14 +216,9 @@ class NetPolicy(nn.Module, Policy):
     def act(
         self,
         observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
         deterministic=False,
     ):
-        features, rnn_hidden_states, _ = self.net(
-            observations, rnn_hidden_states, prev_actions, masks
-        )
+        features, _ = self.net(observations)
         distribution = self.action_distribution(features)
         value = self.critic(features)
 
@@ -246,27 +235,20 @@ class NetPolicy(nn.Module, Policy):
             values=value,
             actions=action,
             action_log_probs=action_log_probs,
-            rnn_hidden_states=rnn_hidden_states,
         )
 
-    def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _, _ = self.net(observations, rnn_hidden_states, prev_actions, masks)
+    def get_value(self, observations):
+        features, _ = self.net(observations)
         return self.critic(features)
 
     def evaluate_actions(
         self,
         observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
         action,
         rnn_build_seq_info: Dict[str, torch.Tensor],
     ):
-        features, rnn_hidden_states, aux_loss_state = self.net(
+        features, aux_loss_state = self.net(
             observations,
-            rnn_hidden_states,
-            prev_actions,
-            masks,
             rnn_build_seq_info,
         )
         distribution = self.action_distribution(features)
@@ -277,9 +259,6 @@ class NetPolicy(nn.Module, Policy):
 
         batch = dict(
             observations=observations,
-            rnn_hidden_states=rnn_hidden_states,
-            prev_actions=prev_actions,
-            masks=masks,
             action=action,
             rnn_build_seq_info=rnn_build_seq_info,
         )
@@ -291,7 +270,6 @@ class NetPolicy(nn.Module, Policy):
             value,
             action_log_probs,
             distribution_entropy,
-            rnn_hidden_states,
             aux_loss_res,
         )
 
@@ -354,6 +332,58 @@ class PointNavBaselinePolicy(NetPolicy):
         )
 
 
+@baseline_registry.register_policy
+class GCNPointNavBaselinePolicy(NetPolicy):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        action_space,
+        state_encoder_input_channels,
+        state_encoder_hidden_channels,
+        state_encoder_out_channels,
+        nb_of_nodes,
+        hidden_size: int = 512,
+        aux_loss_config=None,
+        **kwargs,
+    ):
+        super().__init__(
+            GCNPointNavBaselineNet(  # type: ignore
+                observation_space=observation_space,
+                state_encoder_input_channels=state_encoder_input_channels,
+                state_encoder_hidden_channels=state_encoder_hidden_channels,
+                state_encoder_out_channels=state_encoder_out_channels,
+                nb_of_nodes=nb_of_nodes,
+                hidden_size=hidden_size,
+                **kwargs,
+            ),
+            action_space=action_space,
+            aux_loss_config=aux_loss_config,
+        )
+
+    @classmethod
+    def from_config(
+        cls,
+        config: "DictConfig",
+        observation_space: spaces.Dict,
+        action_space,
+        state_encoder_input_channels,
+        state_encoder_hidden_channels,
+        state_encoder_out_channels,
+        nb_of_nodes,
+        **kwargs,
+    ):
+        return cls(
+            observation_space=observation_space,
+            action_space=action_space,
+            state_encoder_input_channels=state_encoder_input_channels,
+            state_encoder_hidden_channels=state_encoder_hidden_channels,
+            state_encoder_out_channels=state_encoder_out_channels,
+            nb_of_nodes=nb_of_nodes,
+            hidden_size=config.habitat_baselines.rl.ppo.hidden_size,
+            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
+        )
+
+
 # we will not use this base class for the network, replace it with the GCN network
 class Net(nn.Module, metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -374,6 +404,95 @@ class Net(nn.Module, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def is_blind(self):
         pass
+
+
+class PointNavBaselineNet(Net):
+    r"""Network which passes the input image through CNN and concatenates
+    goal vector with CNN's output and passes that through RNN.
+    """
+
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        hidden_size: int,
+    ):
+        super().__init__()
+
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
+            self._n_input_goal = observation_space.spaces[
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            ].shape[0]
+        elif PointGoalSensor.cls_uuid in observation_space.spaces:
+            self._n_input_goal = observation_space.spaces[
+                PointGoalSensor.cls_uuid
+            ].shape[0]
+        elif ImageGoalSensor.cls_uuid in observation_space.spaces:
+            goal_observation_space = spaces.Dict(
+                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
+            )
+            self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+            self._n_input_goal = hidden_size
+
+        self._hidden_size = hidden_size
+
+        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+
+        self.state_encoder = build_rnn_state_encoder(
+            (0 if self.is_blind else self._hidden_size) + self._n_input_goal,
+            self._hidden_size,
+        )
+
+        self.train()
+
+    @property
+    def output_size(self):
+        return self._hidden_size
+
+    @property
+    def is_blind(self):
+        return self.visual_encoder.is_blind
+
+    @property
+    def num_recurrent_layers(self):
+        return self.state_encoder.num_recurrent_layers
+
+    @property
+    def perception_embedding_size(self):
+        return self._hidden_size
+
+    def forward(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
+    ):
+        aux_loss_state = {}
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
+            target_encoding = observations[
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            ]
+        elif PointGoalSensor.cls_uuid in observations:
+            target_encoding = observations[PointGoalSensor.cls_uuid]
+        elif ImageGoalSensor.cls_uuid in observations:
+            image_goal = observations[ImageGoalSensor.cls_uuid]
+            target_encoding = self.goal_visual_encoder({"rgb": image_goal})
+
+        x = [target_encoding]
+
+        if not self.is_blind:
+            perception_embed = self.visual_encoder(observations)
+            x = [perception_embed] + x
+            aux_loss_state["perception_embed"] = perception_embed
+
+        x_out = torch.cat(x, dim=1)
+        x_out, rnn_hidden_states = self.state_encoder(
+            x_out, rnn_hidden_states, masks, rnn_build_seq_info
+        )
+        aux_loss_state["rnn_output"] = x_out
+
+        return x_out, rnn_hidden_states, aux_loss_state
 
 
 # Our own defined network
@@ -533,6 +652,7 @@ class GCNPointNavBaselineNet(Net):
         state_encoder_input_channels: int,
         state_encoder_hidden_channels: int,
         state_encoder_out_channels: int,
+        hidden_size: int,
         nb_of_nodes: int,
     ):
         super().__init__()
@@ -541,6 +661,8 @@ class GCNPointNavBaselineNet(Net):
         self.state_encoder_hidden_channels = state_encoder_hidden_channels
         self.state_encoder_out_channels = state_encoder_out_channels
         self.nb_of_nodes = nb_of_nodes
+
+        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
 
         self.ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
 
