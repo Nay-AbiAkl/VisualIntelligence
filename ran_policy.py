@@ -37,7 +37,23 @@ import torch_geometric
 from torch import nn, optim
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch_geometric.nn import GCNConv, global_mean_pool
-from torchvision import datasets, transforms
+from transformers import ViTConfig, ViTFeatureExtractor, ViTMAEForPreTraining
+
+
+class vitmae:
+    def __init__(self):
+        model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
+        self.feature_extractor = ViTFeatureExtractor.from_pretrained(
+            "facebook/vit-mae-base"
+        )
+        self.encoder = model.vit
+        self.encoder.eval()
+
+    def forward(self, observation):
+        x = observation["rgb"]
+        x = self.feature_extractor(images=x, return_tensors="pt").pixel_values
+        embed = self.encoder(x).last_hidden_state[:, 0]
+        return embed
 
 
 @dataclass
@@ -654,6 +670,7 @@ class GCNPointNavBaselineNet(Net):
         state_encoder_out_channels: int,
         hidden_size: int,
         nb_of_nodes: int,
+        simple_cnn: bool = False,
     ):
         super().__init__()
 
@@ -671,6 +688,34 @@ class GCNPointNavBaselineNet(Net):
             state_encoder_hidden_channels,
             state_encoder_out_channels,
         )
+
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
+            self._n_input_goal = observation_space.spaces[
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            ].shape[0]
+        elif PointGoalSensor.cls_uuid in observation_space.spaces:
+            self._n_input_goal = observation_space.spaces[
+                PointGoalSensor.cls_uuid
+            ].shape[0]
+        elif ImageGoalSensor.cls_uuid in observation_space.spaces:
+            goal_observation_space = spaces.Dict(
+                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
+            )
+            # self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+            if simple_cnn:
+                self.goal_visual_encoder = SimpleCNN(
+                    goal_observation_space, hidden_size
+                )
+            else:
+                self.goal_visual_encoder = vitmae()
+
+            self._n_input_goal = hidden_size
+
+        self._hidden_size = hidden_size
+        if simple_cnn:
+            self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+        else:
+            self.visual_encoder = vitmae()
 
         self.train()
 
