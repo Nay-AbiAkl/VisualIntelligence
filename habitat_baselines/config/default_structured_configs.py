@@ -228,13 +228,17 @@ class HierarchicalPolicy(HabitatBaselinesBaseConfig):
 
 @dataclass
 class PolicyConfig(HabitatBaselinesBaseConfig):
-    name: str = "PointNavResNetPolicy"
+    name: str = "GCNPointNavBaselinePolicy"
     action_distribution_type: str = "categorical"  # or 'gaussian'
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
     hierarchical_policy: HierarchicalPolicy = MISSING
+    state_encoder_input_channels = 771
+    state_encoder_hidden_channels = 512
+    state_encoder_out_channels = 512
+    nb_of_nodes = 512
 
 
 @dataclass

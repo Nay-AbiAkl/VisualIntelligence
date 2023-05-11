@@ -12,6 +12,7 @@ from habitat_baselines.il.trainers.eqa_cnn_pretrain_trainer import (
 from habitat_baselines.il.trainers.pacman_trainer import PACMANTrainer
 from habitat_baselines.il.trainers.vqa_trainer import VQATrainer
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer, RolloutStorage
+from habitat_baselines.rl.ppo.ran_ppo_trainer import RANPPOTrainer
 from habitat_baselines.rl.ver.ver_trainer import VERTrainer
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "BaseRLTrainer",
     "BaseILTrainer",
     "PPOTrainer",
+    "RANPPOTrainer",
     "RolloutStorage",
     "EQACNNPretrainTrainer",
     "PACMANTrainer",

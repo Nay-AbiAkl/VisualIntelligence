@@ -24,10 +24,6 @@ from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
-from omegaconf import OmegaConf
-from torch import nn
-from torch.optim.lr_scheduler import LambdaLR
-
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.construct_vector_env import construct_envs
@@ -37,7 +33,10 @@ from habitat_baselines.common.obs_transformers import (
     get_active_obs_transforms,
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensorboard_utils import TensorboardWriter, get_writer
+from habitat_baselines.common.tensorboard_utils import (
+    TensorboardWriter,
+    get_writer,
+)
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -65,6 +64,9 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
+from omegaconf import OmegaConf
+from torch import nn
+from torch.optim.lr_scheduler import LambdaLR
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -227,7 +229,9 @@ class RANPPOTrainer(BaseRLTrainer):
 
             with read_write(self.config):
                 self.config.habitat_baselines.torch_gpu_id = local_rank
-                self.config.habitat.simulator.habitat_sim_v0.gpu_device_id = local_rank
+                self.config.habitat.simulator.habitat_sim_v0.gpu_device_id = (
+                    local_rank
+                )
                 # Multiply by the number of simulators to make sure they also get unique seeds
                 self.config.habitat.seed += (
                     torch.distributed.get_rank()
@@ -257,7 +261,9 @@ class RANPPOTrainer(BaseRLTrainer):
             if non_scalar_metric_root in self.config.habitat.task.measurements:
                 with read_write(self.config):
                     OmegaConf.set_struct(self.config, False)
-                    self.config.habitat.task.measurements.pop(non_scalar_metric_root)
+                    self.config.habitat.task.measurements.pop(
+                        non_scalar_metric_root
+                    )
                     OmegaConf.set_struct(self.config, True)
                 if self.config.habitat_baselines.verbose:
                     logger.info(
@@ -341,9 +347,9 @@ class RANPPOTrainer(BaseRLTrainer):
 
         if self._static_encoder:
             with inference_mode():
-                batch[PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY] = self._encoder(
-                    batch
-                )
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
         self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
@@ -382,11 +388,15 @@ class RANPPOTrainer(BaseRLTrainer):
 
         torch.save(
             checkpoint,
-            os.path.join(self.config.habitat_baselines.checkpoint_folder, file_name),
+            os.path.join(
+                self.config.habitat_baselines.checkpoint_folder, file_name
+            ),
         )
         torch.save(
             checkpoint,
-            os.path.join(self.config.habitat_baselines.checkpoint_folder, "latest.pth"),
+            os.path.join(
+                self.config.habitat_baselines.checkpoint_folder, "latest.pth"
+            ),
         )
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
@@ -403,7 +413,9 @@ class RANPPOTrainer(BaseRLTrainer):
         return torch.load(checkpoint_path, *args, **kwargs)
 
     @classmethod
-    def _extract_scalars_from_info(cls, info: Dict[str, Any]) -> Dict[str, float]:
+    def _extract_scalars_from_info(
+        cls, info: Dict[str, Any]
+    ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
             if not isinstance(k, str) or k in NON_SCALAR_METRICS:
@@ -413,7 +425,9 @@ class RANPPOTrainer(BaseRLTrainer):
                 result.update(
                     {
                         k + "." + subk: subv
-                        for subk, subv in cls._extract_scalars_from_info(v).items()
+                        for subk, subv in cls._extract_scalars_from_info(
+                            v
+                        ).items()
                         if isinstance(subk, str)
                         and k + "." + subk not in NON_SCALAR_METRICS
                     }
@@ -508,7 +522,9 @@ class RANPPOTrainer(BaseRLTrainer):
             for index_env in range(env_slice.start, env_slice.stop)
         ]
 
-        observations, rewards_l, dones, infos = [list(x) for x in zip(*outputs)]
+        observations, rewards_l, dones, infos = [
+            list(x) for x in zip(*outputs)
+        ]
 
         self.env_time += time.time() - t_step_env
 
@@ -550,9 +566,9 @@ class RANPPOTrainer(BaseRLTrainer):
 
         if self._static_encoder:
             with inference_mode():
-                batch[PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY] = self._encoder(
-                    batch
-                )
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
         self.rollouts.insert(
             next_observations=batch,
@@ -577,7 +593,9 @@ class RANPPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         t_update_model = time.time()
         with inference_mode():
-            step_batch = self.rollouts.buffers[self.rollouts.current_rollout_step_idx]
+            step_batch = self.rollouts.buffers[
+                self.rollouts.current_rollout_step_idx
+            ]
 
             next_value = self.actor_critic.get_value(
                 step_batch["observations"],
@@ -602,7 +620,9 @@ class RANPPOTrainer(BaseRLTrainer):
         self, losses: Dict[str, float], count_steps_delta: int
     ) -> Dict[str, float]:
         stats_ordering = sorted(self.running_episode_stats.keys())
-        stats = torch.stack([self.running_episode_stats[k] for k in stats_ordering], 0)
+        stats = torch.stack(
+            [self.running_episode_stats[k] for k in stats_ordering], 0
+        )
 
         stats = self._all_reduce(stats)
 
@@ -620,7 +640,9 @@ class RANPPOTrainer(BaseRLTrainer):
             count_steps_delta = int(stats[-1].item())
             stats /= torch.distributed.get_world_size()
 
-            losses = {k: stats[i].item() for i, k in enumerate(loss_name_ordering)}
+            losses = {
+                k: stats[i].item() for i, k in enumerate(loss_name_ordering)
+            }
 
         if self._is_distributed and rank0_only():
             self.num_rollouts_done_store.set("num_done", "0")
@@ -630,9 +652,15 @@ class RANPPOTrainer(BaseRLTrainer):
         return losses
 
     @rank0_only
-    def _training_log(self, writer, losses: Dict[str, float], prev_time: int = 0):
+    def _training_log(
+        self, writer, losses: Dict[str, float], prev_time: int = 0
+    ):
         deltas = {
-            k: ((v[-1] - v[0]).sum().item() if len(v) > 1 else v[0].sum().item())
+            k: (
+                (v[-1] - v[0]).sum().item()
+                if len(v) > 1
+                else v[0].sum().item()
+            )
             for k, v in self.window_episode_stats.items()
         }
         deltas["count"] = max(deltas["count"], 1.0)
@@ -660,7 +688,10 @@ class RANPPOTrainer(BaseRLTrainer):
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
 
         # log stats
-        if self.num_updates_done % self.config.habitat_baselines.log_interval == 0:
+        if (
+            self.num_updates_done % self.config.habitat_baselines.log_interval
+            == 0
+        ):
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
@@ -736,12 +767,16 @@ class RANPPOTrainer(BaseRLTrainer):
             self.pth_time = requeue_stats["pth_time"]
             self.num_steps_done = requeue_stats["num_steps_done"]
             self.num_updates_done = requeue_stats["num_updates_done"]
-            self._last_checkpoint_percent = requeue_stats["_last_checkpoint_percent"]
+            self._last_checkpoint_percent = requeue_stats[
+                "_last_checkpoint_percent"
+            ]
             count_checkpoints = requeue_stats["count_checkpoints"]
             prev_time = requeue_stats["prev_time"]
 
             self.running_episode_stats = requeue_stats["running_episode_stats"]
-            self.window_episode_stats.update(requeue_stats["window_episode_stats"])
+            self.window_episode_stats.update(
+                requeue_stats["window_episode_stats"]
+            )
             resume_run_id = requeue_stats.get("run_id", None)
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
@@ -823,7 +858,9 @@ class RANPPOTrainer(BaseRLTrainer):
 
                         if not is_last_step:
                             if (buffer_index + 1) == self._nbuffers:
-                                profiling_wrapper.range_push("_collect_rollout_step")
+                                profiling_wrapper.range_push(
+                                    "_collect_rollout_step"
+                                )
 
                             self._compute_actions_and_step_envs(buffer_index)
 
@@ -884,13 +921,17 @@ class RANPPOTrainer(BaseRLTrainer):
 
         # Map location CPU is almost always better than mapping to a CUDA device.
         if self.config.habitat_baselines.eval.should_load_ckpt:
-            ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
+            ckpt_dict = self.load_checkpoint(
+                checkpoint_path, map_location="cpu"
+            )
             step_id = ckpt_dict["extra_state"]["step"]
             print(step_id)
         else:
             ckpt_dict = {"config": None}
 
-        config = self._get_resume_state_config_or_new_config(ckpt_dict["config"])
+        config = self._get_resume_state_config_or_new_config(
+            ckpt_dict["config"]
+        )
 
         ppo_cfg = config.habitat_baselines.rl.ppo
 
@@ -945,7 +986,9 @@ class RANPPOTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
-        current_episode_reward = torch.zeros(self.envs.num_envs, 1, device="cpu")
+        current_episode_reward = torch.zeros(
+            self.envs.num_envs, 1, device="cpu"
+        )
 
         test_recurrent_hidden_states = torch.zeros(
             self.config.habitat_baselines.num_environments,
@@ -976,7 +1019,9 @@ class RANPPOTrainer(BaseRLTrainer):
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
-        number_of_eval_episodes = self.config.habitat_baselines.test_episode_count
+        number_of_eval_episodes = (
+            self.config.habitat_baselines.test_episode_count
+        )
         evals_per_ep = self.config.habitat_baselines.eval.evals_per_ep
         if number_of_eval_episodes == -1:
             number_of_eval_episodes = sum(self.envs.number_of_episodes)
@@ -1037,7 +1082,9 @@ class RANPPOTrainer(BaseRLTrainer):
 
             outputs = self.envs.step(step_data)
 
-            observations, rewards_l, dones, infos = [list(x) for x in zip(*outputs)]
+            observations, rewards_l, dones, infos = [
+                list(x) for x in zip(*outputs)
+            ]
             policy_info = self.actor_critic.get_policy_info(infos, dones)
             for i in range(len(policy_info)):
                 infos[i].update(policy_info[i])
@@ -1089,8 +1136,12 @@ class RANPPOTrainer(BaseRLTrainer):
                 # episode ended
                 if not not_done_masks[i].item():
                     pbar.update()
-                    episode_stats = {"reward": current_episode_reward[i].item()}
-                    episode_stats.update(self._extract_scalars_from_info(infos[i]))
+                    episode_stats = {
+                        "reward": current_episode_reward[i].item()
+                    }
+                    episode_stats.update(
+                        self._extract_scalars_from_info(infos[i])
+                    )
                     current_episode_reward[i] = 0
                     k = (
                         current_episodes_info[i].scene_id,
@@ -1100,7 +1151,10 @@ class RANPPOTrainer(BaseRLTrainer):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
-                    if len(self.config.habitat_baselines.eval.video_option) > 0:
+                    if (
+                        len(self.config.habitat_baselines.eval.video_option)
+                        > 0
+                    ):
                         generate_video(
                             video_option=self.config.habitat_baselines.eval.video_option,
                             video_dir=self.config.habitat_baselines.video_dir,
