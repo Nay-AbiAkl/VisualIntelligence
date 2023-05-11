@@ -10,7 +10,7 @@ defaults:
 
 habitat_baselines:
   verbose: False
-  trainer_name: "ran_ppo"
+  trainer_name: "ran_ppo" #"ran_ppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
