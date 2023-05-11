@@ -55,6 +55,10 @@ class vitmae:
         embed = self.encoder(x).last_hidden_state[:, 0]
         return embed
 
+    @property
+    def is_blind(self):
+        return False
+
 
 @dataclass
 class PolicyActionData:
@@ -679,8 +683,6 @@ class GCNPointNavBaselineNet(Net):
         self.state_encoder_out_channels = state_encoder_out_channels
         self.nb_of_nodes = nb_of_nodes
 
-        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
-
         self.ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
 
         self.state_encoder = GCN(
@@ -701,7 +703,7 @@ class GCNPointNavBaselineNet(Net):
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
-            # self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+
             if simple_cnn:
                 self.goal_visual_encoder = SimpleCNN(
                     goal_observation_space, hidden_size
@@ -729,6 +731,10 @@ class GCNPointNavBaselineNet(Net):
     def num_hidden_channels(self):
         return self.state_encoder_hidden_channels
 
+    @property
+    def is_blind(self):
+        return self.visual_encoder.is_blind
+
     def forward(
         self,
         observations,
@@ -742,12 +748,12 @@ class GCNPointNavBaselineNet(Net):
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:
             image_goal = observations[ImageGoalSensor.cls_uuid]
-            target_encoding = self.goal_visual_encoder({"rgb": image_goal})
+            target_encoding = self.goal_visual_encoder.forward({"rgb": image_goal})
 
         x = [target_encoding]
 
         if not self.is_blind:
-            perception_embed = self.visual_encoder(observations)
+            perception_embed = self.visual_encoder.forward(observations)
             x = [perception_embed] + x
             aux_loss_state["perception_embed"] = perception_embed
 
