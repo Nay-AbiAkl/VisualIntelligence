@@ -7,9 +7,10 @@ defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 
+
 habitat_baselines:
   verbose: False
-  trainer_name: "ppo"
+  trainer_name: "ran_ppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
@@ -57,4 +58,8 @@ habitat_baselines:
 
     policy: 
       name: "GCNPointNavBaselinePolicy"
+      state_encoder_input_channels: 771
+      state_encoder_hidden_channels: 512
+      state_encoder_out_channels: 512
+      nb_of_nodes: 512
     
