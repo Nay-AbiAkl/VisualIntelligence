@@ -34,10 +34,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as utils
-import torch_geometric.data import Data
-import torch_geometric.loader import DataLoader
 from torch import nn, optim
 from torch.utils.data.sampler import SubsetRandomSampler
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, global_mean_pool
 from transformers import ViTConfig, ViTFeatureExtractor, ViTMAEForPreTraining
 
@@ -710,7 +710,7 @@ class GCNPointNavBaselineNet(Net):
         self.state_encoder_out_channels = state_encoder_out_channels
         self.nb_of_nodes = nb_of_nodes
 
-        #self.ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
+        # self.ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
 
         self.state_encoder = GCN(
             state_encoder_input_channels,
@@ -793,17 +793,15 @@ class GCNPointNavBaselineNet(Net):
         # x_out = torch.cat(x, dim=1)
 
         image_encoding = perception_embed
-        
+
         # batch size is the first dimension in the image encoding
         batch_size = image_encoding.shape[0]
         train_dataset = []
-        
+
         for i in range(batch_size):
             ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
-            
-            node_feat = ring_network.get_node_features(
-                image_encoding, 2, odometry=None
-            )
+
+            node_feat = ring_network.get_node_features(image_encoding, 2, odometry=None)
 
             # Set the node and edge features in the graph object
             for i, feat in enumerate(node_feat):
@@ -811,16 +809,16 @@ class GCNPointNavBaselineNet(Net):
 
             # Generate the input features and edge index tensor for the model
             x = torch.tensor(node_feat, dtype=torch.float)
-            
+
             edge_index = ring_network.get_edge_index()
             edge_index = torch.tensor(edge_index, dtype=torch.long)
-            
+
             data = Data(x=x, edge_index=edge_index, edge_attr=ring_network.edge_feat)
-            
+
             train_dataset.append(data)
 
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        
+
         # Compute the graph embedding using the GCN model
         # We will only have one iteration since the dataset is always of shape batch size
         for data in train_loader:
