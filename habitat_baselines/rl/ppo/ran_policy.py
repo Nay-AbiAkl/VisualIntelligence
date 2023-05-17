@@ -565,7 +565,7 @@ class GCN(nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
 
         # Global pooling to obtain the graph embedding
-        x = global_mean_pool(x, batch, dtype=torch.long)
+        x = global_mean_pool(x, batch)
 
         # add fully connected layers
         # x = F.relu(self.fc1(x))
@@ -801,7 +801,10 @@ class GCNPointNavBaselineNet(Net):
         for i in range(batch_size):
             ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
 
-            node_feat = ring_network.get_node_features(image_encoding, 2, odometry=None)
+            # get image encoding for the current image
+            node_feat = ring_network.get_node_features(
+                image_encoding[i], 2, odometry=None
+            )
 
             # Set the node and edge features in the graph object
             for i, feat in enumerate(node_feat):
