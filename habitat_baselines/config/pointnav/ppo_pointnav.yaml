@@ -17,7 +17,7 @@ habitat_baselines:
   # Evaluate on all episodes
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
-  num_environments: 6
+  num_environments: 1
   checkpoint_folder: "data/new_checkpoints"
   total_num_steps: 75e6
   log_interval: 25
@@ -36,13 +36,13 @@ habitat_baselines:
       # ppo params
       clip_param: 0.2
       ppo_epoch: 4
-      num_mini_batch: 2
+      num_mini_batch: 1
       value_loss_coef: 0.5
       entropy_coef: 0.01
       lr: 2.5e-4
       eps: 1e-5
       max_grad_norm: 0.5
-      num_steps: 128
+      num_steps: 1
       hidden_size: 512
       use_gae: True
       gamma: 0.99

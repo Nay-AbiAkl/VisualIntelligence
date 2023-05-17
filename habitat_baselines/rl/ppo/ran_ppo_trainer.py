@@ -48,15 +48,18 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
-from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
-    PointNavResNetNet,
-    PointNavResNetPolicy,
-)
+
+# from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
+#     PointNavResNetNet,
+#     PointNavResNetPolicy,
+# )
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo import PPO
-from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ppo.ran_policy import NetPolicy
+
+# from habitat_baselines.rl.ppo.ran_policy import GCNPointNavBaselinePolicy
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
@@ -135,9 +138,11 @@ class RANPPOTrainer(BaseRLTrainer):
         """
         logger.add_filehandler(self.config.habitat_baselines.log_file)
 
+        print("policy name ", self.config.habitat_baselines.rl.policy.name)
         policy = baseline_registry.get_policy(
             self.config.habitat_baselines.rl.policy.name
         )
+        print("policy", policy)
         observation_space = self.obs_space
         self.obs_transforms = get_active_obs_transforms(self.config)
         observation_space = apply_obs_transforms_obs_space(
@@ -150,6 +155,7 @@ class RANPPOTrainer(BaseRLTrainer):
             self.policy_action_space,
             orig_action_space=self.orig_policy_action_space,
         )
+        print("self.actor_critic", self.actor_critic)
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
 
@@ -467,17 +473,22 @@ class RANPPOTrainer(BaseRLTrainer):
             ]
 
             profiling_wrapper.range_push("compute actions")
-            (
-                values,
-                actions,
-                actions_log_probs,
-                # recurrent_hidden_states,
-            ) = self.actor_critic.act(
+            # (
+            #     values,
+            #     actions,
+            #     actions_log_probs,
+            #     # recurrent_hidden_states,
+            # )
+            output = self.actor_critic.act(
                 step_batch["observations"],
                 # step_batch["recurrent_hidden_states"],
                 # step_batch["prev_actions"],
                 # step_batch["masks"],
             )
+
+            actions = output.actions
+            values = output.values
+            actions_log_probs = output.action_log_probs
 
         self.pth_time += time.time() - t_sample_action
 
@@ -741,8 +752,9 @@ class RANPPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-
+        print("self.config", self.config)
         resume_state = load_resume_state(self.config)
+        print("resume_state", resume_state)
         self._init_train(resume_state)
 
         count_checkpoints = 0

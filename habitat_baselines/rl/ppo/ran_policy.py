@@ -14,12 +14,17 @@ from habitat.tasks.nav.nav import (
     IntegratedPointGoalGPSAndCompassSensor,
     PointGoalSensor,
 )
-from torch import nn as nn
-
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import CategoricalNet, GaussianNet, get_num_actions
+from habitat_baselines.utils.common import (
+    CategoricalNet,
+    GaussianNet,
+    get_num_actions,
+)
+from torch import nn as nn
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -49,6 +54,7 @@ class vitmae:
         )
         self.encoder = model.vit
         self.encoder.eval()
+        print("vitmae initialized")
 
     def forward(self, observation):
         x = observation["rgb"]
@@ -129,7 +135,9 @@ class Policy(abc.ABC):
     def forward(self, *x):
         raise NotImplementedError
 
-    def get_policy_action_space(self, env_action_space: spaces.Space) -> spaces.Space:
+    def get_policy_action_space(
+        self, env_action_space: spaces.Space
+    ) -> spaces.Space:
         return env_action_space
 
     def _get_policy_components(self) -> List[nn.Module]:
@@ -193,7 +201,9 @@ class Policy(abc.ABC):
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
 
-    def __init__(self, net, action_space, policy_config=None, aux_loss_config=None):
+    def __init__(
+        self, net, action_space, policy_config=None, aux_loss_config=None
+    ):
         super().__init__()
         self.net = net
         self.dim_actions = get_num_actions(action_space)
@@ -202,7 +212,9 @@ class NetPolicy(nn.Module, Policy):
         if policy_config is None:
             self.action_distribution_type = "categorical"
         else:
-            self.action_distribution_type = policy_config.action_distribution_type
+            self.action_distribution_type = (
+                policy_config.action_distribution_type
+            )
 
         if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
@@ -216,7 +228,8 @@ class NetPolicy(nn.Module, Policy):
             )
         else:
             raise ValueError(
-                f"Action distribution {self.action_distribution_type}" "not supported."
+                f"Action distribution {self.action_distribution_type}"
+                "not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)
@@ -250,6 +263,7 @@ class NetPolicy(nn.Module, Policy):
         deterministic=False,
     ):
         features, _ = self.net(observations)
+
         distribution = self.action_distribution(features)
         value = self.critic(features)
 
@@ -275,12 +289,15 @@ class NetPolicy(nn.Module, Policy):
     def evaluate_actions(
         self,
         observations,
+        recurrent_hidden_states,
+        prev_actions,
+        masks,
         action,
         rnn_build_seq_info: Dict[str, torch.Tensor],
     ):
         features, aux_loss_state = self.net(
             observations,
-            rnn_build_seq_info,
+            # rnn_build_seq_info,
         )
         distribution = self.action_distribution(features)
         value = self.critic(features)
@@ -294,13 +311,15 @@ class NetPolicy(nn.Module, Policy):
             rnn_build_seq_info=rnn_build_seq_info,
         )
         aux_loss_res = {
-            k: v(aux_loss_state, batch) for k, v in self.aux_loss_modules.items()
+            k: v(aux_loss_state, batch)
+            for k, v in self.aux_loss_modules.items()
         }
 
         return (
             value,
             action_log_probs,
             distribution_entropy,
+            0,
             aux_loss_res,
         )
 
@@ -337,43 +356,43 @@ class CriticHead(nn.Module):
         return self.fc(x)
 
 
-@baseline_registry.register_policy
-class PointNavBaselinePolicy(NetPolicy):
-    def __init__(
-        self,
-        observation_space: spaces.Dict,
-        action_space,
-        hidden_size: int = 512,
-        aux_loss_config=None,
-        **kwargs,
-    ):
-        super().__init__(
-            PointNavBaselineNet(  # type: ignore
-                observation_space=observation_space,
-                hidden_size=hidden_size,
-                **kwargs,
-            ),
-            action_space=action_space,
-            aux_loss_config=aux_loss_config,
-        )
+# @baseline_registry.register_policy
+# class PointNavBaselinePolicy(NetPolicy):
+#     def __init__(
+#         self,
+#         observation_space: spaces.Dict,
+#         action_space,
+#         hidden_size: int = 512,
+#         aux_loss_config=None,
+#         **kwargs,
+#     ):
+#         super().__init__(
+#             PointNavBaselineNet(  # type: ignore
+#                 observation_space=observation_space,
+#                 hidden_size=hidden_size,
+#                 **kwargs,
+#             ),
+#             action_space=action_space,
+#             aux_loss_config=aux_loss_config,
+#         )
 
-    @classmethod
-    def from_config(
-        cls,
-        config: "DictConfig",
-        observation_space: spaces.Dict,
-        action_space,
-        **kwargs,
-    ):
-        return cls(
-            observation_space=observation_space,
-            action_space=action_space,
-            hidden_size=config.habitat_baselines.rl.ppo.hidden_size,
-            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
-        )
+#     @classmethod
+#     def from_config(
+#         cls,
+#         config: "DictConfig",
+#         observation_space: spaces.Dict,
+#         action_space,
+#         **kwargs,
+#     ):
+#         return cls(
+#             observation_space=observation_space,
+#             action_space=action_space,
+#             hidden_size=config.habitat_baselines.rl.ppo.hidden_size,
+#             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
+#         )
 
 
-@baseline_registry.register_policy
+@baseline_registry.register_ran_policy
 class GCNPointNavBaselinePolicy(NetPolicy):
     def __init__(
         self,
@@ -455,7 +474,10 @@ class PointNavBaselineNet(Net):
     ):
         super().__init__()
 
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
+        if (
+            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            in observation_space.spaces
+        ):
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -467,7 +489,9 @@ class PointNavBaselineNet(Net):
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
-            self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+            self.goal_visual_encoder = SimpleCNN(
+                goal_observation_space, hidden_size
+            )
             self._n_input_goal = hidden_size
 
         self._hidden_size = hidden_size
@@ -514,7 +538,9 @@ class PointNavBaselineNet(Net):
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:
             image_goal = observations[ImageGoalSensor.cls_uuid]
-            target_encoding = self.goal_visual_encoder.forward({"rgb": image_goal})
+            target_encoding = self.goal_visual_encoder.forward(
+                {"rgb": image_goal}
+            )
 
         x = [target_encoding]
 
@@ -621,7 +647,9 @@ class RingAttractorNetworkGraph:
         positions = self.distribute_nodes_on_circle(radius=1)
 
         nb_connections_tensor = torch.tensor(nb_connections).unsqueeze(0)
-        nb_connections_tensor = nb_connections_tensor.repeat(self.nb_of_nodes - 1, 1)
+        nb_connections_tensor = nb_connections_tensor.repeat(
+            self.nb_of_nodes - 1, 1
+        )
         nb_connections_tensor = torch.cat(
             (
                 nb_connections_tensor,
@@ -629,13 +657,13 @@ class RingAttractorNetworkGraph:
             ),
             0,
         )
-
+        # print("before repeat", image_encoding.shape)
         image_encoding = image_encoding.repeat(self.nb_of_nodes, 1)
 
         feature_vector = torch.concat(
             (image_encoding, nb_connections_tensor, positions), 1
         )
-
+        # print("before repeat", image_encoding.shape)
         if odometry is not None:
             odometry = odometry.repeat(self.nb_of_nodes, 1)
             feature_vector = torch.concat((feature_vector, odometry), 1)
@@ -673,8 +701,12 @@ class RingAttractorNetworkGraph:
         angles = np.linspace(
             0, 2 * np.pi, self.nb_of_nodes - 1, endpoint=False
         )  # Divide the circle into equal angles
-        x = radius * np.cos(angles)  # Calculate x-coordinates using cosine function
-        y = radius * np.sin(angles)  # Calculate y-coordinates using sine function
+        x = radius * np.cos(
+            angles
+        )  # Calculate x-coordinates using cosine function
+        y = radius * np.sin(
+            angles
+        )  # Calculate y-coordinates using sine function
         positions = np.column_stack(
             (x, y)
         )  # Stack x and y coordinates as column vectors
@@ -711,7 +743,10 @@ class GCNPointNavBaselineNet(Net):
             state_encoder_out_channels,
         )
 
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
+        if (
+            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            in observation_space.spaces
+        ):
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -744,8 +779,10 @@ class GCNPointNavBaselineNet(Net):
     @property
     def output_size(self):
         return (
-            self.state_encoder_out_channels
-        )  # state encoder hidden channels is another option
+            4
+            # self.state_encoder_out_channels
+            # state encoder hidden channels is another option
+        )
 
     @property
     def is_blind(self):
@@ -772,10 +809,12 @@ class GCNPointNavBaselineNet(Net):
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:
             image_goal = observations[ImageGoalSensor.cls_uuid]
-            target_encoding = self.goal_visual_encoder.foward({"rgb": image_goal})
+            target_encoding = self.goal_visual_encoder.foward(
+                {"rgb": image_goal}
+            )
 
         x = [target_encoding]
-
+        # print("obsevrations", observations["rgb"].shape)
         if not self.is_blind:
             perception_embed = self.visual_encoder.forward(observations)
             x = [perception_embed] + x
