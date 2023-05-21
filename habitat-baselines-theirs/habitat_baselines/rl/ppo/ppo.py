@@ -12,6 +12,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch import Tensor
+
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
@@ -20,7 +22,6 @@ from habitat_baselines.utils.common import (
     LagrangeInequalityCoefficient,
     inference_mode,
 )
-from torch import Tensor
 
 EPS_PPO = 1e-5
 
@@ -61,6 +62,7 @@ class PPO(nn.Module):
         entropy_target_factor: float = 0.0,
         use_adaptive_entropy_pen: bool = False,
     ) -> None:
+
         super().__init__()
 
         self.actor_critic = actor_critic
@@ -157,6 +159,7 @@ class PPO(nn.Module):
         self,
         rollouts: RolloutStorage,
     ) -> Dict[str, float]:
+
         advantages = self.get_advantages(rollouts)
 
         learner_metrics = collections.defaultdict(list)
@@ -170,7 +173,6 @@ class PPO(nn.Module):
                 learner_metrics[f"{prefix}_{name}"].append(op(t))
 
         for epoch in range(self.ppo_epoch):
-            print("epoch", epoch)
             profiling_wrapper.range_push("PPO.update epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.num_mini_batch

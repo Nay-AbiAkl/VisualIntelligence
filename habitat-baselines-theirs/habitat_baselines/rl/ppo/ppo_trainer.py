@@ -444,6 +444,7 @@ class PPOTrainer(BaseRLTrainer):
     def _extract_scalars_from_infos(
         cls, infos: List[Dict[str, Any]]
     ) -> Dict[str, List[float]]:
+
         results = defaultdict(list)
         for i in range(len(infos)):
             for k, v in cls._extract_scalars_from_info(infos[i]).items():
