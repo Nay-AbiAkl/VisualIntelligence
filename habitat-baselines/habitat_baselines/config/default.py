@@ -37,9 +37,7 @@ def get_config(
     :param configs_dir: path to the config files root directory (defaults to :ref:`_BASELINES_CFG_DIR`).
     :return: composed config object.
     """
-
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
-
     cfg = _habitat_get_config(config_path, overrides, configs_dir)
 
     return cfg
