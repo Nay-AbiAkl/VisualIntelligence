@@ -4,23 +4,33 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+print("A")
+
 import glob
+print("B")
 import os.path
+print("C")
 import sys
+print("D")
 
 import setuptools
+print("E")
 from setuptools.command.develop import develop as DefaultDevelopCommand
+print("F")
 from setuptools.command.install import install as DefaultInstallCommand
+print("G")
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "habitat_baselines")
 )
+print("H")
 from version import VERSION  # isort:skip noqa
-
+print("I")
 
 with open("../README.md", encoding="utf8") as f:
     readme = f.read()
 
+print("J")
 
 DISTNAME = "habitat-baselines"
 DESCRIPTION = "Habitat baselines: a modular high-level library for end-to-end development in Embodied AI training."
@@ -33,16 +43,23 @@ PROJECT_URLS = {
     "GitHub repo": "https://github.com/facebookresearch/habitat-lab/",
     "Bug Tracker": "https://github.com/facebookresearch/habitat-lab/issues",
 }
+print("K")
 REQUIREMENTS = set()
+print("L")
 # collect requirements.txt file in all subdirectories
 for file_name in glob.glob(
     "habitat_baselines/**/requirements.txt", recursive=True
 ):
+    print("M")
     with open(file_name) as f:
+        print("N")
         reqs = f.read()
+        print("O")
         REQUIREMENTS.update(reqs.strip().split("\n"))
+        print("P")
 
 if __name__ == "__main__":
+    print("Q")
     setuptools.setup(
         name=DISTNAME,
         install_requires=list(REQUIREMENTS),
