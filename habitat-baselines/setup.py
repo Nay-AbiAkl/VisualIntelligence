@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-
 import glob
 
 from setuptools import find_packages, setup
 
+print("Start of script")
+
 
 def read(file_path, *args, **kwargs):
+    print(f"Reading from {file_path}")
     with open(file_path, *args, **kwargs) as f:
         content = f.read()
     return content
 
 
 def collect_requirements():
+    print("Collecting requirements")
     # collect requirements.txt file in all subdirectories
     requirements = set()
     for file_path in glob.glob(
         "habitat_baselines/**/requirements.txt", recursive=True
     ):
+        print(f"Found requirements file: {file_path}")
         content = read(file_path)
         requirements.update(content.strip().split("\n"))
 
@@ -31,6 +32,7 @@ def get_package_version():
     import os.path as osp
     import sys
 
+    print("Getting package version")
     sys.path.insert(0, osp.join(osp.dirname(__file__), "habitat_baselines"))
     from version import VERSION
 
@@ -38,6 +40,7 @@ def get_package_version():
 
 
 if __name__ == "__main__":
+    print("Main execution started")
     setup(
         name="habitat-baselines",
         install_requires=collect_requirements(),
@@ -76,3 +79,5 @@ if __name__ == "__main__":
             ],
         },
     )
+
+    print("End of script")
