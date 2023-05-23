@@ -51,7 +51,7 @@ class vitmae:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.encoder.to(self.device)
         self.encoder.eval()
-        print("vitmae initialized")
+        print("vitmae initialized TEST ")
 
     def forward(self, observation):
         observation.to(self.device)
