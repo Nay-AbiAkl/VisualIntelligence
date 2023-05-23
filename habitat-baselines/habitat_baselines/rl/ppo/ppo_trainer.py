@@ -15,10 +15,6 @@ import numpy as np
 import torch
 import tqdm
 from gym import spaces
-from omegaconf import OmegaConf
-from torch import nn
-from torch.optim.lr_scheduler import LambdaLR
-
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
@@ -37,10 +33,7 @@ from habitat_baselines.common.obs_transformers import (
     get_active_obs_transforms,
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensorboard_utils import (
-    TensorboardWriter,
-    get_writer,
-)
+from habitat_baselines.common.tensorboard_utils import TensorboardWriter, get_writer
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -68,6 +61,9 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
+from omegaconf import OmegaConf
+from torch import nn
+from torch.optim.lr_scheduler import LambdaLR
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -926,7 +922,7 @@ class PPOTrainer(BaseRLTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
+            # print(step_id)
         else:
             ckpt_dict = {"config": None}
 

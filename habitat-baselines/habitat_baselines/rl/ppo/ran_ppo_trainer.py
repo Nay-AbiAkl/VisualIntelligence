@@ -100,7 +100,6 @@ class RANPPOTrainer(BaseRLTrainer):
         # Distributed if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
-        print("RAN PPO Trainer")
 
     @property
     def obs_space(self):
@@ -820,7 +819,7 @@ class RANPPOTrainer(BaseRLTrainer):
                     self._compute_actions_and_step_envs(buffer_index)
 
                 for step in range(ppo_cfg.num_steps):
-                    print("step", step)
+                    # print("step", step)
                     is_last_step = (
                         self.should_end_early(step + 1)
                         or (step + 1) == ppo_cfg.num_steps
@@ -899,7 +898,7 @@ class RANPPOTrainer(BaseRLTrainer):
         if self.config.habitat_baselines.eval.should_load_ckpt:
             ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
+            # print(step_id)
         else:
             ckpt_dict = {"config": None}
 

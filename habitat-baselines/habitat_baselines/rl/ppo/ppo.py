@@ -16,10 +16,7 @@ from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
-from habitat_baselines.utils.common import (
-    LagrangeInequalityCoefficient,
-    inference_mode,
-)
+from habitat_baselines.utils.common import LagrangeInequalityCoefficient, inference_mode
 from torch import Tensor
 
 EPS_PPO = 1e-5
@@ -136,9 +133,7 @@ class PPO(nn.Module):
         if not self.use_normalized_advantage:
             return advantages
 
-        var, mean = self._compute_var_mean(
-            advantages[torch.isfinite(advantages)]
-        )
+        var, mean = self._compute_var_mean(advantages[torch.isfinite(advantages)])
 
         advantages -= mean
 
@@ -170,7 +165,6 @@ class PPO(nn.Module):
                 learner_metrics[f"{prefix}_{name}"].append(op(t))
 
         for epoch in range(self.ppo_epoch):
-            print("epoch", epoch)
             profiling_wrapper.range_push("PPO.update epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.num_mini_batch
@@ -245,9 +239,7 @@ class PPO(nn.Module):
                 if isinstance(self.entropy_coef, float):
                     all_losses.append(-self.entropy_coef * dist_entropy)
                 else:
-                    all_losses.append(
-                        self.entropy_coef.lagrangian_loss(dist_entropy)
-                    )
+                    all_losses.append(self.entropy_coef.lagrangian_loss(dist_entropy))
 
                 all_losses.extend(v["loss"] for v in aux_loss_res.values())
 
@@ -263,9 +255,7 @@ class PPO(nn.Module):
 
                 with inference_mode():
                     if "is_coeffs" in batch:
-                        record_min_mean_max(
-                            batch["is_coeffs"], "ver_is_coeffs"
-                        )
+                        record_min_mean_max(batch["is_coeffs"], "ver_is_coeffs")
                     record_min_mean_max(orig_values, "value_pred")
                     record_min_mean_max(ratio, "prob_ratio")
 
@@ -279,18 +269,14 @@ class PPO(nn.Module):
                         )
 
                     learner_metrics["grad_norm"].append(grad_norm)
-                    if isinstance(
-                        self.entropy_coef, LagrangeInequalityCoefficient
-                    ):
+                    if isinstance(self.entropy_coef, LagrangeInequalityCoefficient):
                         learner_metrics["entropy_coef"].append(
                             self.entropy_coef().detach()
                         )
 
                     for name, res in aux_loss_res.items():
                         for k, v in res.items():
-                            learner_metrics[f"aux_{name}_{k}"].append(
-                                v.detach()
-                            )
+                            learner_metrics[f"aux_{name}_{k}"].append(v.detach())
 
                     if "is_stale" in batch:
                         assert isinstance(batch["is_stale"], torch.Tensor)
@@ -299,9 +285,7 @@ class PPO(nn.Module):
                         )
 
                     if isinstance(rollouts, VERRolloutStorage):
-                        assert isinstance(
-                            batch["policy_version"], torch.Tensor
-                        )
+                        assert isinstance(batch["policy_version"], torch.Tensor)
                         record_min_mean_max(
                             (
                                 rollouts.current_policy_version
@@ -341,9 +325,7 @@ class PPO(nn.Module):
         if torch.distributed.is_initialized():
             for p in self.non_ac_params:
                 if p.grad is not None:
-                    p.grad.data.detach().div_(
-                        torch.distributed.get_world_size()
-                    )
+                    p.grad.data.detach().div_(torch.distributed.get_world_size())
                     handles.append(
                         torch.distributed.all_reduce(
                             p.grad.data.detach(), async_op=True
