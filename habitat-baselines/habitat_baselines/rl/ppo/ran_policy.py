@@ -48,10 +48,13 @@ class vitmae:
             "facebook/vit-mae-base"
         )
         self.encoder = model.vit
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.encoder.to(self.device)
         self.encoder.eval()
         print("vitmae initialized")
 
     def forward(self, observation):
+        observation.to(self.device)
         x = observation["rgb"]
         x = self.feature_extractor(images=x, return_tensors="pt").pixel_values
         embed = self.encoder(x).last_hidden_state[:, 0]
@@ -719,6 +722,9 @@ class GCNPointNavBaselineNet(Net):
             state_encoder_out_channels,
         )
 
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.state_encoder.to(device=device)
+
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -800,6 +806,7 @@ class GCNPointNavBaselineNet(Net):
         train_dataset = []
 
         for i in range(batch_size):
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             ring_network = RingAttractorNetworkGraph(self.nb_of_nodes)
 
             # get image encoding for the current image
