@@ -841,6 +841,10 @@ class GCNPointNavBaselineNet(Net):
         # Compute the graph embedding using the GCN model
         # We will only have one iteration since the dataset is always of shape batch size
         for data in train_loader:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            data.x = data.x.to(device)
+            data.edge_index = data.edge_index.to(device)
+            data.batch = data.batch.to(device)
             embedding = self.state_encoder(data.x, data.edge_index, data.batch)
 
         return embedding, aux_loss_state
