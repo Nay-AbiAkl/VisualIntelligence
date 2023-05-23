@@ -15,15 +15,9 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.models.rnn_state_encoder import (
-    build_rnn_state_encoder,
-)
+from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import (
-    CategoricalNet,
-    GaussianNet,
-    get_num_actions,
-)
+from habitat_baselines.utils.common import CategoricalNet, GaussianNet, get_num_actions
 from torch import nn as nn
 
 if TYPE_CHECKING:
@@ -136,9 +130,7 @@ class Policy(abc.ABC):
     def forward(self, *x):
         raise NotImplementedError
 
-    def get_policy_action_space(
-        self, env_action_space: spaces.Space
-    ) -> spaces.Space:
+    def get_policy_action_space(self, env_action_space: spaces.Space) -> spaces.Space:
         return env_action_space
 
     def _get_policy_components(self) -> List[nn.Module]:
@@ -202,9 +194,7 @@ class Policy(abc.ABC):
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
 
-    def __init__(
-        self, net, action_space, policy_config=None, aux_loss_config=None
-    ):
+    def __init__(self, net, action_space, policy_config=None, aux_loss_config=None):
         super().__init__()
         self.net = net
         self.dim_actions = get_num_actions(action_space)
@@ -213,9 +203,7 @@ class NetPolicy(nn.Module, Policy):
         if policy_config is None:
             self.action_distribution_type = "categorical"
         else:
-            self.action_distribution_type = (
-                policy_config.action_distribution_type
-            )
+            self.action_distribution_type = policy_config.action_distribution_type
 
         if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
@@ -229,8 +217,7 @@ class NetPolicy(nn.Module, Policy):
             )
         else:
             raise ValueError(
-                f"Action distribution {self.action_distribution_type}"
-                "not supported."
+                f"Action distribution {self.action_distribution_type}" "not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)
@@ -312,8 +299,7 @@ class NetPolicy(nn.Module, Policy):
             rnn_build_seq_info=rnn_build_seq_info,
         )
         aux_loss_res = {
-            k: v(aux_loss_state, batch)
-            for k, v in self.aux_loss_modules.items()
+            k: v(aux_loss_state, batch) for k, v in self.aux_loss_modules.items()
         }
 
         return (
@@ -475,10 +461,7 @@ class PointNavBaselineNet(Net):
     ):
         super().__init__()
 
-        if (
-            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            in observation_space.spaces
-        ):
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -490,9 +473,7 @@ class PointNavBaselineNet(Net):
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
-            self.goal_visual_encoder = SimpleCNN(
-                goal_observation_space, hidden_size
-            )
+            self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
             self._n_input_goal = hidden_size
 
         self._hidden_size = hidden_size
@@ -539,9 +520,7 @@ class PointNavBaselineNet(Net):
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:
             image_goal = observations[ImageGoalSensor.cls_uuid]
-            target_encoding = self.goal_visual_encoder.forward(
-                {"rgb": image_goal}
-            )
+            target_encoding = self.goal_visual_encoder.forward({"rgb": image_goal})
 
         x = [target_encoding]
 
@@ -602,6 +581,7 @@ class RingAttractorNetworkGraph:
 
     def __init__(self, nb_of_nodes: int) -> None:
         # Note that final center node is of idx nb_of_nodes-1
+        print("RAN GRAPH INIT")
         self.nb_of_nodes = nb_of_nodes
         self.ran_graph = nx.MultiDiGraph()
 
@@ -648,9 +628,7 @@ class RingAttractorNetworkGraph:
         positions = self.distribute_nodes_on_circle(radius=1)
 
         nb_connections_tensor = torch.tensor(nb_connections).unsqueeze(0)
-        nb_connections_tensor = nb_connections_tensor.repeat(
-            self.nb_of_nodes - 1, 1
-        )
+        nb_connections_tensor = nb_connections_tensor.repeat(self.nb_of_nodes - 1, 1)
         nb_connections_tensor = torch.cat(
             (
                 nb_connections_tensor,
@@ -702,12 +680,8 @@ class RingAttractorNetworkGraph:
         angles = np.linspace(
             0, 2 * np.pi, self.nb_of_nodes - 1, endpoint=False
         )  # Divide the circle into equal angles
-        x = radius * np.cos(
-            angles
-        )  # Calculate x-coordinates using cosine function
-        y = radius * np.sin(
-            angles
-        )  # Calculate y-coordinates using sine function
+        x = radius * np.cos(angles)  # Calculate x-coordinates using cosine function
+        y = radius * np.sin(angles)  # Calculate y-coordinates using sine function
         positions = np.column_stack(
             (x, y)
         )  # Stack x and y coordinates as column vectors
@@ -744,10 +718,7 @@ class GCNPointNavBaselineNet(Net):
             state_encoder_out_channels,
         )
 
-        if (
-            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            in observation_space.spaces
-        ):
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -810,9 +781,7 @@ class GCNPointNavBaselineNet(Net):
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:
             image_goal = observations[ImageGoalSensor.cls_uuid]
-            target_encoding = self.goal_visual_encoder.foward(
-                {"rgb": image_goal}
-            )
+            target_encoding = self.goal_visual_encoder.foward({"rgb": image_goal})
 
         x = [target_encoding]
         # print("obsevrations", observations["rgb"].shape)
@@ -847,15 +816,11 @@ class GCNPointNavBaselineNet(Net):
             edge_index = ring_network.get_edge_index()
             edge_index = torch.tensor(edge_index, dtype=torch.long)
 
-            data = Data(
-                x=x, edge_index=edge_index, edge_attr=ring_network.edge_feat
-            )
+            data = Data(x=x, edge_index=edge_index, edge_attr=ring_network.edge_feat)
 
             train_dataset.append(data)
 
-        train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
-        )
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         # Compute the graph embedding using the GCN model
         # We will only have one iteration since the dataset is always of shape batch size
