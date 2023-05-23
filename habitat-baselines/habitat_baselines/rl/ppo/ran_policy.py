@@ -704,6 +704,7 @@ class GCNPointNavBaselineNet(Net):
         simple_cnn: bool = False,
     ):
         super().__init__()
+        print("GCN INIT")
 
         self.state_encoder_input_channels = state_encoder_input_channels
         self.state_encoder_hidden_channels = state_encoder_hidden_channels
