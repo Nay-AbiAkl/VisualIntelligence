@@ -51,8 +51,8 @@ class vitmae:
 
         self.encoder = model.vit
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(self.device)
-        self.encoder.to(self.device)
+        # model.to(self.device)
+        # self.encoder.to(self.device)
         self.encoder.eval()
 
         print("vitmae initialized TEST ")
@@ -60,8 +60,9 @@ class vitmae:
     def forward(self, observation):
         x = observation["rgb"]
         x = self.feature_extractor(images=x, return_tensors="pt").pixel_values
-        x = x.to(self.device)
+        # x = x.to(self.device)
         embed = self.encoder(x).last_hidden_state[:, 0]
+        embed = embed.to(self.device)
         return embed
 
     @property
