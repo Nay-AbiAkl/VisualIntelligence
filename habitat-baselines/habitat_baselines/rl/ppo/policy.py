@@ -8,26 +8,49 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union
 
 import torch
 from gym import spaces
-from torch import nn as nn
-
 from habitat.tasks.nav.nav import (
     ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
     PointGoalSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.models.rnn_state_encoder import (
-    build_rnn_state_encoder,
-)
+from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import (
-    CategoricalNet,
-    GaussianNet,
-    get_num_actions,
-)
+from habitat_baselines.utils.common import CategoricalNet, GaussianNet, get_num_actions
+from torch import nn as nn
+from transformers import ViTFeatureExtractor, ViTMAEForPreTraining
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+
+class vitmae:
+    def __init__(self):
+        model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
+
+        self.feature_extractor = ViTFeatureExtractor.from_pretrained(
+            "facebook/vit-mae-base"
+        )
+
+        self.encoder = model.vit
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # model.to(self.device)
+        # self.encoder.to(self.device)
+        self.encoder.eval()
+
+        print("vitmae initialized TEST ")
+
+    def forward(self, observation):
+        x = observation["rgb"]
+        x = self.feature_extractor(images=x, return_tensors="pt").pixel_values
+        # x = x.to(self.device)
+        embed = self.encoder(x).last_hidden_state[:, 0]
+        embed = embed.to(self.device)
+        return embed
+
+    @property
+    def is_blind(self):
+        return False
 
 
 class Policy(abc.ABC):
@@ -76,9 +99,7 @@ class Policy(abc.ABC):
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
 
-    def __init__(
-        self, net, action_space, policy_config=None, aux_loss_config=None
-    ):
+    def __init__(self, net, action_space, policy_config=None, aux_loss_config=None):
         super().__init__()
         self.net = net
         self.dim_actions = get_num_actions(action_space)
@@ -87,9 +108,7 @@ class NetPolicy(nn.Module, Policy):
         if policy_config is None:
             self.action_distribution_type = "categorical"
         else:
-            self.action_distribution_type = (
-                policy_config.action_distribution_type
-            )
+            self.action_distribution_type = policy_config.action_distribution_type
 
         if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
@@ -103,8 +122,7 @@ class NetPolicy(nn.Module, Policy):
             )
         else:
             raise ValueError(
-                f"Action distribution {self.action_distribution_type}"
-                "not supported."
+                f"Action distribution {self.action_distribution_type}" "not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)
@@ -159,9 +177,7 @@ class NetPolicy(nn.Module, Policy):
         return value, action, action_log_probs, rnn_hidden_states
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _, _ = self.net(
-            observations, rnn_hidden_states, prev_actions, masks
-        )
+        features, _, _ = self.net(observations, rnn_hidden_states, prev_actions, masks)
         return self.critic(features)
 
     def evaluate_actions(
@@ -195,8 +211,7 @@ class NetPolicy(nn.Module, Policy):
             rnn_build_seq_info=rnn_build_seq_info,
         )
         aux_loss_res = {
-            k: v(aux_loss_state, batch)
-            for k, v in self.aux_loss_modules.items()
+            k: v(aux_loss_state, batch) for k, v in self.aux_loss_modules.items()
         }
 
         return (
@@ -314,10 +329,7 @@ class PointNavBaselineNet(Net):
     ):
         super().__init__()
 
-        if (
-            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            in observation_space.spaces
-        ):
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -329,14 +341,14 @@ class PointNavBaselineNet(Net):
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
-            self.goal_visual_encoder = SimpleCNN(
-                goal_observation_space, hidden_size
-            )
+            # self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+            self.goal_visual_encoder = vitmae()
             self._n_input_goal = hidden_size
 
         self._hidden_size = hidden_size
 
-        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+        # self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+        self.visual_encoder = vitmae()
 
         self.state_encoder = build_rnn_state_encoder(
             (0 if self.is_blind else self._hidden_size) + self._n_input_goal,
