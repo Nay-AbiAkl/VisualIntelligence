@@ -44,7 +44,9 @@ from transformers import ViTConfig, ViTFeatureExtractor, ViTMAEForPreTraining
 class vitmae:
     def __init__(self):
         model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
-
+        self.device = device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
         self.feature_extractor = ViTFeatureExtractor.from_pretrained(
             "facebook/vit-mae-base"
         )
@@ -52,7 +54,7 @@ class vitmae:
         self.encoder = model.vit
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # model.to(self.device)
-        # self.encoder.to(self.device)
+        self.encoder.to(self.device)
         self.encoder.eval()
 
         print("vitmae initialized TEST ")
@@ -60,7 +62,7 @@ class vitmae:
     def forward(self, observation):
         x = observation["rgb"]
         x = self.feature_extractor(images=x, return_tensors="pt").pixel_values
-        # x = x.to(self.device)
+        x = x.to(self.device)
         embed = self.encoder(x).last_hidden_state[:, 0]
         embed = embed.to(self.device)
         return embed
@@ -714,7 +716,7 @@ class GCNPointNavBaselineNet(Net):
         state_encoder_out_channels: int,
         hidden_size: int,
         nb_of_nodes: int,
-        simple_cnn: bool = False,
+        simple_cnn: bool = True,
     ):
         super().__init__()
 
@@ -731,8 +733,8 @@ class GCNPointNavBaselineNet(Net):
             state_encoder_out_channels,
         )
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.state_encoder.to(device=device)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.state_encoder.to(device=self.device)
 
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
             self._n_input_goal = observation_space.spaces[
@@ -799,18 +801,16 @@ class GCNPointNavBaselineNet(Net):
             image_goal = observations[ImageGoalSensor.cls_uuid]
             target_encoding = self.goal_visual_encoder.foward({"rgb": image_goal})
 
-        x = [target_encoding]
-        # print("obsevrations", observations["rgb"].shape)
+        x = [target_encoding.to(self.device)]
         if not self.is_blind:
             perception_embed = self.visual_encoder.forward(observations)
+            # print("perc emb device ", perception_embed.device)
             x = [perception_embed] + x
             aux_loss_state["perception_embed"] = perception_embed
 
-        # x_out = torch.cat(x, dim=1)
+        x_out = torch.cat(x, dim=1)
 
-        image_encoding = perception_embed
-
-        # batch size is the first dimension in the image encoding
+        image_encoding = x_out
         batch_size = image_encoding.shape[0]
         train_dataset = []
 
