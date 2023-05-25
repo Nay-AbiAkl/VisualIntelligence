@@ -19,6 +19,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encode
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 from habitat_baselines.utils.common import CategoricalNet, GaussianNet, get_num_actions
 from torch import nn as nn
+from torch_geometric_temporal.nn.recurrent import GConvGRU
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -552,15 +553,8 @@ class PointNavBaselineNet(Net):
 class GCN(nn.Module):
     def __init__(self, num_features, hidden_channels, out_channels):
         super(GCN, self).__init__()
-        self.conv1 = GCNConv(num_features, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, hidden_channels)
-
-        # add 5 fully connected layers to gradually reduce the dimension
-        # self.fc1 = torch.nn.Linear(out_channels, 64)
-        # self.fc2 = torch.nn.Linear(64, 32)
-        # self.fc3 = torch.nn.Linear(32, 16)
-        # self.fc4 = torch.nn.Linear(16, 8)
-        # self.fc5 = torch.nn.Linear(8, 4)
+        self.conv1 = GConvGRU(num_features, hidden_channels, K=2)
+        self.conv2 = GConvGRU(hidden_channels, out_channels, K=2)
 
     def forward(self, x, edge_index, batch):
         # Apply the first GCN layer
@@ -575,13 +569,6 @@ class GCN(nn.Module):
 
         # Global pooling to obtain the graph embedding
         x = global_mean_pool(x, batch)
-
-        # add fully connected layers
-        # x = F.relu(self.fc1(x))
-        # x = F.relu(self.fc2(x))
-        # x = F.relu(self.fc3(x))
-        # x = F.relu(self.fc4(x))
-        # x = self.fc5(x)
 
         return x
 
