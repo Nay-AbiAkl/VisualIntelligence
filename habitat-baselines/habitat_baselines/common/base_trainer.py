@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple, Union
 import torch
 from habitat import logger
 from habitat.core.vector_env import VectorEnv
-from numpy import ndarray
-from torch import Tensor
-
-from habitat_baselines.common.tensorboard_utils import TensorboardWriter, get_writer
+from habitat_baselines.common.tensorboard_utils import (
+    TensorboardWriter,
+    get_writer,
+)
 from habitat_baselines.rl.ddppo.ddp_utils import (
     SAVE_STATE,
     add_signal_handlers,
@@ -22,7 +22,12 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     load_resume_state,
     save_resume_state,
 )
-from habitat_baselines.utils.common import get_checkpoint_id, poll_checkpoint_folder
+from habitat_baselines.utils.common import (
+    get_checkpoint_id,
+    poll_checkpoint_folder,
+)
+from numpy import ndarray
+from torch import Tensor
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -40,7 +45,9 @@ class BaseTrainer:
     def train(self) -> None:
         raise NotImplementedError
 
-    def _get_resume_state_config_or_new_config(self, resume_state_config: "DictConfig"):
+    def _get_resume_state_config_or_new_config(
+        self, resume_state_config: "DictConfig"
+    ):
         if self.config.habitat_baselines.load_resume_state_config:
             if self.config != resume_state_config:
                 logger.warning(
@@ -92,7 +99,9 @@ class BaseTrainer:
             assert (
                 len(self.config.habitat_baselines.tensorboard_dir) > 0
             ), "Must specify a tensorboard directory for video display"
-            os.makedirs(self.config.habitat_baselines.tensorboard_dir, exist_ok=True)
+            os.makedirs(
+                self.config.habitat_baselines.tensorboard_dir, exist_ok=True
+            )
         if "disk" in self.config.habitat_baselines.eval.video_option:
             assert (
                 len(self.config.habitat_baselines.video_dir) > 0
@@ -100,7 +109,9 @@ class BaseTrainer:
 
         with get_writer(self.config, flush_secs=self.flush_secs) as writer:
             if (
-                os.path.isfile(self.config.habitat_baselines.eval_ckpt_path_dir)
+                os.path.isfile(
+                    self.config.habitat_baselines.eval_ckpt_path_dir
+                )
                 or not self.config.habitat_baselines.eval.should_load_ckpt
             ):
                 # evaluate single checkpoint. If `should_load_ckpt=False` then
@@ -127,8 +138,10 @@ class BaseTrainer:
                 while True:
                     current_ckpt = None
                     while current_ckpt is None:
+                        print("polling for checkpoint...", current_ckpt)
                         current_ckpt = poll_checkpoint_folder(
-                            self.config.habitat_baselines.eval_ckpt_path_dir,
+                            # self.config.habitat_baselines.eval_ckpt_path_dir,
+                            "/Users/mariamhegazy/CS_503_ws/project/data/PPO_checkpoints",
                             prev_ckpt_ind,
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
@@ -244,9 +257,15 @@ class BaseRLTrainer(BaseTrainer):
 
     def percent_done(self) -> float:
         if self.config.habitat_baselines.num_updates != -1:
-            return self.num_updates_done / self.config.habitat_baselines.num_updates
+            return (
+                self.num_updates_done
+                / self.config.habitat_baselines.num_updates
+            )
         else:
-            return self.num_steps_done / self.config.habitat_baselines.total_num_steps
+            return (
+                self.num_steps_done
+                / self.config.habitat_baselines.total_num_steps
+            )
 
     def is_done(self) -> bool:
         return self.percent_done() >= 1.0
@@ -254,8 +273,13 @@ class BaseRLTrainer(BaseTrainer):
     def should_checkpoint(self) -> bool:
         needs_checkpoint = False
         if self.config.habitat_baselines.num_checkpoints != -1:
-            checkpoint_every = 1 / self.config.habitat_baselines.num_checkpoints
-            if self._last_checkpoint_percent + checkpoint_every < self.percent_done():
+            checkpoint_every = (
+                1 / self.config.habitat_baselines.num_checkpoints
+            )
+            if (
+                self._last_checkpoint_percent + checkpoint_every
+                < self.percent_done()
+            ):
                 needs_checkpoint = True
                 self._last_checkpoint_percent = self.percent_done()
         else:
@@ -344,7 +368,9 @@ class BaseRLTrainer(BaseTrainer):
                 envs.pause_at(idx)
 
             # indexing along the batch dimensions
-            test_recurrent_hidden_states = test_recurrent_hidden_states[state_index]
+            test_recurrent_hidden_states = test_recurrent_hidden_states[
+                state_index
+            ]
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]

@@ -27,10 +27,6 @@ import attr
 import numpy as np
 import torch
 from gym import spaces
-from PIL import Image
-from torch import Size, Tensor
-from torch import nn as nn
-
 from habitat import logger
 from habitat.core.dataset import Episode
 from habitat.core.spaces import EmptySpace
@@ -43,6 +39,9 @@ from habitat_baselines.common.tensor_dict import (
     TensorOrNDArrayDict,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from PIL import Image
+from torch import Size, Tensor
+from torch import nn as nn
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -366,6 +365,7 @@ def poll_checkpoint_folder(
     assert os.path.isdir(checkpoint_folder), (
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
+
     models_paths = list(
         filter(
             lambda name: "latest" not in name,
