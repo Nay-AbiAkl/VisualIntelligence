@@ -14,9 +14,15 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import CategoricalNet, GaussianNet, get_num_actions
+from habitat_baselines.utils.common import (
+    CategoricalNet,
+    GaussianNet,
+    get_num_actions,
+)
 from torch import nn as nn
 from transformers import ViTFeatureExtractor, ViTMAEForPreTraining
 
@@ -48,7 +54,9 @@ class vitmae:
         )
 
         self.encoder = model.vit
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
         # model.to(self.device)
         # self.encoder.to(self.device)
         self.encoder.eval()
@@ -114,7 +122,9 @@ class Policy(abc.ABC):
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
 
-    def __init__(self, net, action_space, policy_config=None, aux_loss_config=None):
+    def __init__(
+        self, net, action_space, policy_config=None, aux_loss_config=None
+    ):
         super().__init__()
         self.net = net
         self.dim_actions = get_num_actions(action_space)
@@ -123,7 +133,9 @@ class NetPolicy(nn.Module, Policy):
         if policy_config is None:
             self.action_distribution_type = "categorical"
         else:
-            self.action_distribution_type = policy_config.action_distribution_type
+            self.action_distribution_type = (
+                policy_config.action_distribution_type
+            )
 
         if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
@@ -137,7 +149,8 @@ class NetPolicy(nn.Module, Policy):
             )
         else:
             raise ValueError(
-                f"Action distribution {self.action_distribution_type}" "not supported."
+                f"Action distribution {self.action_distribution_type}"
+                "not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)
@@ -192,7 +205,9 @@ class NetPolicy(nn.Module, Policy):
         return value, action, action_log_probs, rnn_hidden_states
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _, _ = self.net(observations, rnn_hidden_states, prev_actions, masks)
+        features, _, _ = self.net(
+            observations, rnn_hidden_states, prev_actions, masks
+        )
         return self.critic(features)
 
     def evaluate_actions(
@@ -226,7 +241,8 @@ class NetPolicy(nn.Module, Policy):
             rnn_build_seq_info=rnn_build_seq_info,
         )
         aux_loss_res = {
-            k: v(aux_loss_state, batch) for k, v in self.aux_loss_modules.items()
+            k: v(aux_loss_state, batch)
+            for k, v in self.aux_loss_modules.items()
         }
 
         return (
@@ -344,7 +360,10 @@ class PointNavBaselineNet(Net):
     ):
         super().__init__()
 
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
+        if (
+            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            in observation_space.spaces
+        ):
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -356,7 +375,9 @@ class PointNavBaselineNet(Net):
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
-            self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+            self.goal_visual_encoder = SimpleCNN(
+                goal_observation_space, hidden_size
+            )
             # self.goal_visual_encoder = vitmae()
             self._n_input_goal = hidden_size
 
@@ -365,15 +386,13 @@ class PointNavBaselineNet(Net):
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
 
         self.graph_encoder = GCN(
-            517,
+            515,
             512,
             hidden_size,
         )
 
         self.state_encoder = build_rnn_state_encoder(
-            (0 if self.is_blind else self._hidden_size)
-            + self._n_input_goal
-            + hidden_size,
+            (0 if self.is_blind else self._hidden_size) + self._n_input_goal,
             self._hidden_size,
         )
 
@@ -418,54 +437,70 @@ class PointNavBaselineNet(Net):
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
-            x = [perception_embed] + x
+            # x = [perception_embed] + x
             aux_loss_state["perception_embed"] = perception_embed
 
-        x_out = torch.cat(x, dim=1)
+        # x_out = torch.cat(x, dim=1)
 
         # Add the graph network
-        batch_size = x_out.shape[0]
+        batch_size = perception_embed.shape[0]
+        # print("batch size is ", batch_size)
         train_dataset = []
 
         for i in range(batch_size):
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            ring_network = RingAttractorNetworkGraph(512)  # (self.nb_of_nodes)
+            device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
+            ring_network = RingAttractorNetworkGraph(8)  # (self.nb_of_nodes)
 
             # get image encoding for the current image
-            node_feat = ring_network.get_node_features(x_out[i], 2, odometry=None)
+            node_feat = ring_network.get_node_features(
+                perception_embed[i], 2, odometry=None
+            )
 
             # Set the node and edge features in the graph object
             for i, feat in enumerate(node_feat):
                 ring_network.ran_graph.nodes[i]["feature"] = feat
 
             # Generate the input features and edge index tensor for the model
-            x = torch.tensor(node_feat, dtype=torch.float)
+            node_feat_tensor = torch.tensor(node_feat, dtype=torch.float)
 
             edge_index = ring_network.get_edge_index()
             edge_index = torch.tensor(edge_index, dtype=torch.long)
 
-            data = Data(x=x, edge_index=edge_index, edge_attr=ring_network.edge_feat)
+            data = Data(
+                x=node_feat_tensor,
+                edge_index=edge_index,
+                edge_attr=ring_network.edge_feat,
+            )
 
             train_dataset.append(data)
 
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True
+        )
 
         # Compute the graph embedding using the GCN model
         # We will only have one iteration since the dataset is always of shape
         # batch size
         embedding = torch.zeros((batch_size, self._hidden_size))
         for data in train_loader:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
             data.x = data.x.to(device)
             data.edge_index = data.edge_index.to(device)
             data.batch = data.batch.to(device)
-            embedding = self.state_encoder(data.x, data.edge_index, data.batch)
+            embedding = self.graph_encoder(data.x, data.edge_index, data.batch)
 
         # embedding is of shape (batch_size, hidden_size of CNN)
-        print("embedding shape: ", embedding.shape)
-        print("x_out shape: ", x_out.shape)
+        # print("embedding shape: ", embedding.shape)
 
-        x_out = torch.cat((x_out, embedding), dim=1)
+        x = [embedding] + x
+
+        x_out = torch.cat(x, dim=1)
+        # print("x_out shape: ", x_out.shape)
+        # x_out = embedding
 
         # Add the graph embedding to the input
         x_out, rnn_hidden_states = self.state_encoder(
@@ -553,7 +588,9 @@ class RingAttractorNetworkGraph:
         positions = self.distribute_nodes_on_circle(radius=1)
 
         nb_connections_tensor = torch.tensor(nb_connections).unsqueeze(0)
-        nb_connections_tensor = nb_connections_tensor.repeat(self.nb_of_nodes - 1, 1)
+        nb_connections_tensor = nb_connections_tensor.repeat(
+            self.nb_of_nodes - 1, 1
+        )
         nb_connections_tensor = torch.cat(
             (
                 nb_connections_tensor,
@@ -610,8 +647,12 @@ class RingAttractorNetworkGraph:
         angles = np.linspace(
             0, 2 * np.pi, self.nb_of_nodes - 1, endpoint=False
         )  # Divide the circle into equal angles
-        x = radius * np.cos(angles)  # Calculate x-coordinates using cosine function
-        y = radius * np.sin(angles)  # Calculate y-coordinates using sine function
+        x = radius * np.cos(
+            angles
+        )  # Calculate x-coordinates using cosine function
+        y = radius * np.sin(
+            angles
+        )  # Calculate y-coordinates using sine function
         positions = np.column_stack(
             (x, y)
         )  # Stack x and y coordinates as column vectors

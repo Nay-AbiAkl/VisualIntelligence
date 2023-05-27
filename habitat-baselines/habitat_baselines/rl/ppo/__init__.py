@@ -5,26 +5,27 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat_baselines.rl.ppo.cpc_aux_loss import CPCA
-from habitat_baselines.rl.ppo.ppo import PPO
-
-# from habitat_baselines.rl.ppo.policy import (
-#     Net,
-#     NetPolicy,
-#     PointNavBaselinePolicy,
-#     Policy,
-# )
-from habitat_baselines.rl.ppo.ran_policy import (
-    GCNPointNavBaselinePolicy,
+from habitat_baselines.rl.ppo.policy import (
     Net,
     NetPolicy,
+    PointNavBaselinePolicy,
     Policy,
 )
+from habitat_baselines.rl.ppo.ppo import PPO
+
+# from habitat_baselines.rl.ppo.ran_policy import (
+#     GCNPointNavBaselinePolicy,
+#     Net,
+#     NetPolicy,
+#     Policy,
+# )
 
 __all__ = [
     "PPO",
     "Policy",
     "NetPolicy",
     "Net",
-    "GCNPointNavBaselinePolicy",
+    # "GCNPointNavBaselinePolicy",
+    "PointNavBaselinePolicy",
     "CPCA",
 ]

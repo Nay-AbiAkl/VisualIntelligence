@@ -14,7 +14,7 @@ defaults:
 
 habitat_baselines:
   verbose: False
-  trainer_name: "ran_ppo" #"ran_ppo"
+  trainer_name: "ppo" #"ran_ppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
@@ -24,16 +24,16 @@ habitat_baselines:
   num_environments: 1
   checkpoint_folder: "data/new_checkpoints"
   total_num_steps: 75e6
-  log_interval: 25
+  log_interval: 5
   num_checkpoints: 100
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
 
   eval:
-    video_option: [ ]
+    # video_option: ["disk"]
     # Can be uncommented to generate videos.
-    # video_option: ["disk", "tensorboard"]
+    video_option: ["disk", "tensorboard"]
 
   rl:
     ppo:
@@ -60,10 +60,11 @@ habitat_baselines:
       # policy inference time during rollout generation
       use_double_buffered_sampler: False
 
-    policy: 
-      name: "GCNPointNavBaselinePolicy"
-      state_encoder_input_channels: 771
-      state_encoder_hidden_channels: 512
-      state_encoder_out_channels: 512
-      nb_of_nodes: 512
+    # policy: 
+      # name: "PointNavBaselinePolicy"
+      # name: "PointNavResNetPolicy"
+    #   state_encoder_input_channels: 517 #771
+    #   state_encoder_hidden_channels: 512
+    #   state_encoder_out_channels: 512
+    #   nb_of_nodes: 512
     
