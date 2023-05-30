@@ -622,8 +622,8 @@ class GCN(nn.Module):
     def __init__(self, num_features, hidden_channels, out_channels):
         super(GCN, self).__init__()
         self.conv1 = GCNConv(num_features, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, hidden_channels / 2)
-        self.conv3 = GCNConv(hidden_channels / 2, out_channels)
+        self.conv2 = GCNConv(hidden_channels, int(hidden_channels / 2))
+        self.conv3 = GCNConv(int(hidden_channels / 2), out_channels)
 
     def forward(self, x, edge_index, batch):
         # Apply the first GCN layer
