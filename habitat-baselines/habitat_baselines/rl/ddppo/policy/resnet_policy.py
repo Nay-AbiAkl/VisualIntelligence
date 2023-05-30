@@ -396,15 +396,15 @@ class PointNavResNetNet(Net):
         # Add the gcn encoder and update the rnn input size
         self.graph_encoder = GCN(
             515,
-            512,
-            hidden_size,
+            256,
+            64,
         )
         # rnn_input_size += hidden_size
 
         print(" AFTER GCN INIT ")
 
         self.state_encoder = build_rnn_state_encoder(
-            (0 if self.is_blind else self._hidden_size) + rnn_input_size,
+            (0 if self.is_blind else 64) + rnn_input_size,
             self._hidden_size,
             rnn_type=rnn_type,
             num_layers=num_recurrent_layers,
@@ -621,19 +621,21 @@ class PointNavResNetNet(Net):
 class GCN(nn.Module):
     def __init__(self, num_features, hidden_channels, out_channels):
         super(GCN, self).__init__()
-        self.conv1 = GConvGRU(num_features, hidden_channels, K=2)
-        self.conv2 = GConvGRU(hidden_channels, out_channels, K=2)
+        self.conv1 = GCNConv(num_features, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, hidden_channels / 2)
+        self.conv3 = GCNConv(hidden_channels / 2, out_channels)
 
     def forward(self, x, edge_index, batch):
         # Apply the first GCN layer
         x = self.conv1(x, edge_index)
         x = F.relu(x)
-        x = F.dropout(x, p=0.5, training=self.training)
 
         # Apply the second GCN layer
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        x = F.dropout(x, p=0.5, training=self.training)
+
+        x = self.conv3(x, edge_index)
+        x = F.relu(x)
 
         # Global pooling to obtain the graph embedding
         x = global_mean_pool(x, batch)
