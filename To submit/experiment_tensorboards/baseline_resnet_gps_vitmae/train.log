@@ -1,0 +1,46 @@
+2023-05-28 14:37:52,134 agent number of parameters: 2070821
+2023-05-28 14:46:18,088 update: 25	fps: 12.654	
+2023-05-28 14:46:18,091 update: 25	env-time: 97.861s	pth-time: 406.321s	frames: 6400
+2023-05-28 14:46:18,093 Average window size: 25  distance_to_goal: 17.930  distance_to_goal_reward: 0.000  reward: -0.028  spl: 0.000  success: 0.000
+2023-05-28 14:53:57,069 update: 50	fps: 13.268	
+2023-05-28 14:53:57,070 update: 50	env-time: 140.824s	pth-time: 820.835s	frames: 12800
+2023-05-28 14:53:57,073 Average window size: 50  distance_to_goal: 17.749  distance_to_goal_reward: 0.000  reward: 0.105  spl: 0.000  success: 0.000
+2023-05-28 15:01:23,500 update: 75	fps: 13.606	
+2023-05-28 15:01:23,503 update: 75	env-time: 173.721s	pth-time: 1232.914s	frames: 19200
+2023-05-28 15:01:23,505 Average window size: 50  distance_to_goal: 14.813  distance_to_goal_reward: 0.000  reward: 2.298  spl: 0.002  success: 0.002
+2023-05-28 15:08:53,046 update: 100	fps: 13.758	
+2023-05-28 15:08:53,048 update: 100	env-time: 206.976s	pth-time: 1647.656s	frames: 25600
+2023-05-28 15:08:53,053 Average window size: 50  distance_to_goal: 4.357  distance_to_goal_reward: 0.000  reward: 12.702  spl: 0.044  success: 0.053
+2023-05-28 15:16:19,940 update: 125	fps: 13.867	
+2023-05-28 15:16:19,944 update: 125	env-time: 238.870s	pth-time: 2061.213s	frames: 32000
+2023-05-28 15:16:19,949 Average window size: 50  distance_to_goal: 0.969  distance_to_goal_reward: 0.000  reward: 16.493  spl: 0.196  success: 0.250
+2023-05-28 15:23:48,843 update: 150	fps: 13.931	
+2023-05-28 15:23:48,851 update: 150	env-time: 272.530s	pth-time: 2474.956s	frames: 38400
+2023-05-28 15:23:48,856 Average window size: 50  distance_to_goal: 0.610  distance_to_goal_reward: 0.000  reward: 16.672  spl: 0.315  success: 0.395
+2023-05-28 15:31:20,190 update: 175	fps: 13.966	
+2023-05-28 15:31:20,194 update: 175	env-time: 306.443s	pth-time: 2890.923s	frames: 44800
+2023-05-28 15:31:20,198 Average window size: 50  distance_to_goal: 0.485  distance_to_goal_reward: 0.000  reward: 17.022  spl: 0.358  success: 0.438
+2023-05-28 15:38:46,725 update: 200	fps: 14.011	
+2023-05-28 15:38:46,727 update: 200	env-time: 338.520s	pth-time: 3303.848s	frames: 51200
+2023-05-28 15:38:46,730 Average window size: 50  distance_to_goal: 0.334  distance_to_goal_reward: 0.000  reward: 17.701  spl: 0.346  success: 0.435
+2023-05-28 15:46:14,928 update: 225	fps: 14.040	
+2023-05-28 15:46:14,930 update: 225	env-time: 372.048s	pth-time: 3717.046s	frames: 57600
+2023-05-28 15:46:14,935 Average window size: 50  distance_to_goal: 0.480  distance_to_goal_reward: 0.000  reward: 18.095  spl: 0.286  success: 0.347
+2023-05-28 15:53:46,448 update: 250	fps: 14.053	
+2023-05-28 15:53:46,453 update: 250	env-time: 405.808s	pth-time: 4133.313s	frames: 64000
+2023-05-28 15:53:46,459 Average window size: 50  distance_to_goal: 0.388  distance_to_goal_reward: 0.000  reward: 17.731  spl: 0.420  success: 0.476
+2023-05-28 16:01:14,841 update: 275	fps: 14.073	
+2023-05-28 16:01:14,843 update: 275	env-time: 438.670s	pth-time: 4547.355s	frames: 70400
+2023-05-28 16:01:14,849 Average window size: 50  distance_to_goal: 0.201  distance_to_goal_reward: 0.000  reward: 19.085  spl: 0.554  success: 0.622
+2023-05-28 16:08:45,178 update: 300	fps: 14.084	
+2023-05-28 16:08:45,181 update: 300	env-time: 472.494s	pth-time: 4962.266s	frames: 76800
+2023-05-28 16:08:45,185 Average window size: 50  distance_to_goal: 0.228  distance_to_goal_reward: 0.000  reward: 19.557  spl: 0.598  success: 0.677
+2023-05-28 16:16:16,831 update: 325	fps: 14.091	
+2023-05-28 16:16:16,833 update: 325	env-time: 506.497s	pth-time: 5378.435s	frames: 83200
+2023-05-28 16:16:16,837 Average window size: 50  distance_to_goal: 0.224  distance_to_goal_reward: 0.000  reward: 18.200  spl: 0.640  success: 0.717
+2023-05-28 16:23:45,683 update: 350	fps: 14.103	
+2023-05-28 16:23:45,687 update: 350	env-time: 539.123s	pth-time: 5793.213s	frames: 89600
+2023-05-28 16:23:45,691 Average window size: 50  distance_to_goal: 0.189  distance_to_goal_reward: 0.000  reward: 18.236  spl: 0.658  success: 0.725
+2023-05-28 16:31:17,347 update: 375	fps: 14.107	
+2023-05-28 16:31:17,350 update: 375	env-time: 572.777s	pth-time: 6209.748s	frames: 96000
+2023-05-28 16:31:17,352 Average window size: 50  distance_to_goal: 0.156  distance_to_goal_reward: 0.000  reward: 19.355  spl: 0.726  success: 0.790
