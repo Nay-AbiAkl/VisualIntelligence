@@ -38,9 +38,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from ran_graph_gcn import GCN, RingAttractorNetworkGraph
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
-from ran_graph_gcn import GCN, RingAttractorNetworkGraph
 
 
 @baseline_registry.register_policy

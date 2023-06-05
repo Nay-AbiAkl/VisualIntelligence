@@ -1,0 +1,10 @@
+habitat-lab
+habitat-sim
+numpy 
+torch
+torch_geometric
+collections
+matplotlib
+transformers
+networkx
+tqdm
